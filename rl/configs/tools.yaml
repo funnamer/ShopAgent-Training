@@ -1,0 +1,36 @@
+tools:
+  - class_name: rl.shop_tool.ShopSimulatorTool
+    config:
+      type: native
+      base_url: http://127.0.0.1:5000
+    tool_schema:
+      type: function
+      function:
+        name: search
+        description: Search the shopping catalog when search is available.
+        parameters:
+          type: object
+          properties:
+            keywords:
+              type: string
+              description: Precise product search keywords.
+          required: [keywords]
+          additionalProperties: false
+
+  - class_name: rl.shop_tool.ShopSimulatorTool
+    config:
+      type: native
+      base_url: http://127.0.0.1:5000
+    tool_schema:
+      type: function
+      function:
+        name: click
+        description: Click one exact value from the current clickable-buttons list.
+        parameters:
+          type: object
+          properties:
+            value:
+              type: string
+              description: Exact value from the current clickable-buttons list.
+          required: [value]
+          additionalProperties: false

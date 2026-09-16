@@ -1,0 +1,2 @@
+# Core dependencies for the ShopSimulator environment and evaluation agents.
+-r shop_env/requirements.txt

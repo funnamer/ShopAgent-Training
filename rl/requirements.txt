@@ -1,0 +1,49 @@
+# ShopSimulator Qwen3-4B GRPO environment
+#
+# The verl commit is pinned from the official repository.  The v0.9.0 wheel
+# predates the vLLM >=0.25 unstacked LoRA-name mapper required by Qwen3's
+# packed qkv_proj/gate_up_proj layers.
+# Python 3.12 + NVIDIA CUDA 12.8+ are required.  Install this into a fresh
+# CUDA-enabled environment; pip cannot install the NVIDIA driver or CUDA toolkit.
+#
+# The launcher uses verl's padded SDPA path, so do NOT add flash-attn here.
+# flash-attn is ABI-sensitive and is intentionally not required by run_grpo.sh.
+
+# RL engine and CUDA runtime stack
+torch==2.11.0
+torchvision==0.26.0
+torchaudio==2.11.0
+verl @ git+https://github.com/verl-project/verl.git@10db40d0da4d59150bb389960b77585f81a89b8d
+vllm==0.24.0
+transformers==5.9.0
+ray[default]==2.58.0
+tensordict==0.10.0
+
+# Training, model, and dataset support
+accelerate==1.15.0
+datasets==5.0.1
+peft==0.20.0
+pyarrow==25.0.1
+hydra-core==1.3.6
+omegaconf==2.3.1
+packaging==25.0
+numpy==2.3.5
+pandas==3.0.5
+sentencepiece==0.2.2
+safetensors==0.8.0
+tokenizers==0.22.2
+
+# Project runtime and observability
+requests==2.34.2
+RapidFuzz==3.14.6
+wandb==0.30.0
+swanlab==0.10.0
+
+# ShopSimulator client/runtime helpers. The HTTP service itself is installed
+# separately from ../shop_env/requirements.txt in the shopsim environment.
+python-dotenv==1.2.3
+PyYAML==6.0.3
+openai==3.13.0
+tqdm==4.70.1
+rich==15.0.0
+beautifulsoup4==4.15.0

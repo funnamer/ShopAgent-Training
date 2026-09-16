@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+.cache/
+.pytest_cache/
+.ipynb_checkpoints/
+.idea/
+*.log
+*.LOG
+*.LOG.*
+*.lock
+.DS_Store
+
+# ShopSimulator runtime data and generated trajectories stay local.
+/shopSimulator/outputs/
+/shopSimulator/multi_eval/outputs/
+/shopSimulator/single_eval/outputs/
+/shopSimulator/trajectory_collection/outputs/
+/shopSimulator/shop_env/search_engine/
+/shopSimulator/shop_env/web_agent_site/models/logs/
+/shopSimulator/shop_env/data/*.json
+
+# Model weights and training checkpoints stay under /root/autodl-tmp.
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.gguf
+checkpoint-*/
+global_step_*/

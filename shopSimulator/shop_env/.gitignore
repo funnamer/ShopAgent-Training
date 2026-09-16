@@ -1,0 +1,4 @@
+# tb_items目录中除了指定文件外的所有文件
+data/*.json
+!data/*.json.gz
+search_engine/

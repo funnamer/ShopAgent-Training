@@ -1,0 +1,47 @@
+collection_name: standard-single-deepseek-thinking-test50-v2
+teacher_config: single_eval/configs/standard/deepseek_thinking.yaml
+data_file: shop_env/data/fine_items_eval_train_all.json
+output_root: trajectory_collection/outputs
+
+seed: 42
+train_start: 1459
+train_end: 23421
+candidate_size: 2000
+online_dev_size: 400
+pilot_size: 10
+rollouts_per_task: 4
+max_workers: 20
+
+difficulty_quotas:
+  simple: 600
+  medium: 1000
+  hard: 400
+
+online_dev_difficulty_quotas:
+  simple: 120
+  medium: 200
+  hard: 80
+
+accepted_difficulty_quotas:
+  simple: 450
+  medium: 750
+  hard: 300
+
+sft_split_sizes:
+  train: 1000
+  validation: 100
+  reserve: 400
+
+sft_split_difficulty_quotas:
+  train:
+    simple: 300
+    medium: 500
+    hard: 200
+  validation:
+    simple: 30
+    medium: 50
+    hard: 20
+  reserve:
+    simple: 120
+    medium: 200
+    hard: 80

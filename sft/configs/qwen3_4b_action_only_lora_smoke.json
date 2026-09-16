@@ -1,0 +1,31 @@
+{
+  "model_path": "/root/autodl-tmp/Qwen3-4B",
+  "data_path": "shopSimulator/trajectory_collection/outputs/standard-single-deepseek-thinking-test50-v2/sft/accepted_sft_no_thought_prompt.jsonl",
+  "output_dir": "/root/autodl-tmp/sft_outputs/qwen3-4b-action-only-lora-smoke",
+  "max_length": 2048,
+  "eval_ratio": 0.10,
+  "seed": 42,
+  "num_train_epochs": 1.0,
+  "max_steps": 1,
+  "learning_rate": 0.0002,
+  "weight_decay": 0.01,
+  "warmup_ratio": 0.0,
+  "per_device_train_batch_size": 1,
+  "per_device_eval_batch_size": 1,
+  "gradient_accumulation_steps": 1,
+  "logging_steps": 1,
+  "eval_steps": 1,
+  "save_steps": 1,
+  "save_total_limit": 1,
+  "dataloader_num_workers": 0,
+  "swanlab_mode": "online",
+  "swanlab_project": "qwen3-shop-action-sft",
+  "swanlab_run_name": "qwen3-4b-action-only-lora-smoke",
+  "lora_r": 32,
+  "lora_alpha": 64,
+  "lora_dropout": 0.05,
+  "lora_target_modules": [
+    "q_proj", "k_proj", "v_proj", "o_proj",
+    "gate_proj", "up_proj", "down_proj"
+  ]
+}

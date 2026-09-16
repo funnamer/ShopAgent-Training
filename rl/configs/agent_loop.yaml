@@ -1,0 +1,2 @@
+- name: shop_tool_agent
+  _target_: rl.agent_loop.ShopAgentLoop

@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.idea/vcs.xml
+
+# Model weights and training state (keep these under /root/autodl-tmp)
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.gguf
+checkpoint-*/
+global_step_*/
