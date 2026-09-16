@@ -2,7 +2,7 @@
 
 这是一个端到端的 LLM Agent 训练项目：在 ShopSimulator 购物环境中，我先把原始网页式交互整理成稳定、可复现的标准工具调用任务，再用 DeepSeek 教师模型采集并严格筛选多轮购物轨迹，对 Qwen3-4B 做 action-only LoRA SFT，最后用 verl + vLLM + FSDP2 在 4 张 GPU 上进行多轮 GRPO，让模型不只会调用工具，还能学会搜索、比较、选择和购买。
 
-这项工作的重点不是“把两个训练脚本跑起来”，而是打通下面这条链路，并保证每一步可验证、可恢复、可复现：
+完整实验流程：
 
 ```mermaid
 flowchart LR
@@ -48,7 +48,7 @@ ShopSimulator 提供了商品、用户指令、页面状态和评分逻辑。本
 教师使用开启 thinking 的 DeepSeek 模型。每个任务生成多个候选 rollout，然后分两步选数据：
 
 1. **硬校验**：reward 必须为 1；ASIN、属性、选项、价格和商品类型必须与任务一致；必须正常 purchase 结束；不得出现隐藏重试、工具错误、消息角色错序、tool ID 不匹配、不可用 click/search、同状态重复动作或特权标签泄漏。
-2. **Best-of-N 排序**：只在硬校验通过的候选中选择，依次偏好更少重复动作、更少工具调用、更少 completion token，最后用 rollout ID 稳定打破平局。
+2. **Best-of-N 排序**：只在硬校验通过的候选中选择，依次偏好更少重复动作、更少工具调用、更少 completion token，最后用 rollout ID 区分不同任务。
 
 当前代码默认支持 Best-of-4；本次实际用于 SFT 的历史采集产物是 **2,000 题 × 2 次 = 4,000 条 rollout（Best-of-2）**。其中 2,251 条通过硬校验，最终有 1,486 个任务至少存在一条可用轨迹：
 
