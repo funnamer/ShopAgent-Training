@@ -1,135 +1,92 @@
-# ShopSimulator GRPO (verl + LoRA)
+# ShopSimulator GRPO（verl + LoRA）
 
-This directory is isolated from `single_eval/` and contains the Qwen3-4B GRPO
-LoRA path. It loads the already merged action-only SFT checkpoint as a normal
-Hugging Face model and creates a new trainable GRPO LoRA on top of it.
+此目录与 `single_eval/` 相互独立，包含 Qwen3-4B 的 GRPO LoRA 训练流程。它会将已合并、仅包含动作数据的 SFT 检查点作为普通 Hugging Face 模型加载，并在其上创建一个新的、可训练的 GRPO LoRA。
 
-## Reward V1
+## 奖励 V1
 
-For a purchase, the compliance components are:
+对于一次购买，合规性由以下部分组成：
 
 ```text
 Q = C_type * (0.45 * C_attr + 0.40 * C_option + 0.15 * C_price)
 ```
 
-- `C_type` is a hard gate: exact ASIN or exact non-empty category path. Empty
-  queries and broad category overlap never pass it.
-- `C_attr` and `C_option` are matched fractions in `[0, 1]`.
-- `C_price` uses the visible instruction budget and the selected SKU price.
-- A fully compliant purchase gets `+1.0`.
-- A wrong purchase gets `-1.0 + 0.2Q`, before small behavior penalties.
-- Timeout/history/context limit gets `-1.05`; malformed/no-action termination
-  gets `-1.10`.
-- Buying an item worse than the best product actually shown incurs
-  `-0.2 * max(0, Q_seen_best - Q_purchase)`.
-- Same-state repeated actions cost `0.05` each, capped at `0.20`; invalid
-  actions cost `0.05` each, capped at `0.10`.
-- There is no step penalty and no direct reward for `back`. A useful back action
-  is learned because it avoids the much larger irreversible wrong-buy penalty.
-- Infrastructure failures raise `InfrastructureRewardError`, so they are not
-  silently treated as model failures.
+- `C_type` 是一个硬门控条件：必须精确匹配 ASIN，或精确匹配非空的类目路径。空查询和宽泛的类目重叠均无法通过。
+- `C_attr` 和 `C_option` 是 `[0, 1]` 范围内的匹配比例。
+- `C_price` 使用指令中可见的预算和所选 SKU 的价格计算。
+- 完全合规的购买获得 `+1.0` 奖励。
+- 错误购买在扣除少量行为惩罚前，获得 `-1.0 + 0.2Q` 奖励。
+- 超时、历史记录超限或上下文超限获得 `-1.05`；格式错误或无动作终止获得 `-1.10`。
+- 如果购买的商品劣于实际展示过的最佳商品，则会受到 `-0.2 * max(0, Q_seen_best - Q_purchase)` 的惩罚。
+- 在相同状态下重复执行动作，每次扣除 `0.05`，上限为 `0.20`；无效动作每次扣除 `0.05`，上限为 `0.10`。
+- 不设步数惩罚，也不对 `back` 动作直接给予奖励。有效的返回动作之所以能被学会，是因为它可以避免代价大得多且不可逆的错误购买惩罚。
+- 基础设施故障会抛出 `InfrastructureRewardError`，因此不会被静默地视为模型故障。
 
-Reward diagnostics (`strict_success`, every compliance component, regret,
-back/invalid/repeat/action counts) are returned to verl and logged separately.
+奖励诊断信息（`strict_success`、各项合规性指标、遗憾值，以及返回/无效/重复/动作计数）会返回给 verl，并分别记录日志。
 
-## Data policy
+## 数据策略
 
-The default train IDs are the existing 2,000 candidate IDs and validation uses
-64 deterministic IDs from the disjoint online-dev manifest. Dataset generation
-re-parses every visible budget and excludes tasks whose canonical requested SKU
-cannot satisfy it. The exact product-data SHA256 and exclusions are recorded in
-`/root/autodl-tmp/ShopAgent-Training/rl/data/manifest.json`.
+默认训练集 ID 为现有的 2,000 个候选 ID；验证集则使用来自互不重叠的 online-dev 清单中的 64 个确定性 ID。生成数据集时会重新解析每个可见预算，并排除其规范请求 SKU 无法满足预算的任务。产品数据的准确 SHA256 值和排除项记录在 `/root/autodl-tmp/ShopAgent-Training/rl/data/manifest.json` 中。
 
-Regenerate data:
+重新生成数据：
 
 ```bash
 cd /root/ShopAgent-Training
 PYTHONPATH=$PWD:$PWD/shopSimulator /root/miniconda3/envs/rl/bin/python -m rl.prepare_dataset
 ```
 
-## Run
+## 运行
 
-Terminal 1 starts the existing ShopSimulator API with exactly 20 slots. Initial
-loading can take several minutes:
+终端 1 使用恰好 20 个槽位启动现有的 ShopSimulator API。首次加载可能需要几分钟：
 
 ```bash
 cd /root/ShopAgent-Training
 bash rl/start_shop_env.sh
 ```
 
-Terminal 2 launches GRPO on every GPU visible to the `rl` environment (four
-GPUs on the current host):
+终端 2 在 `rl` 环境可见的所有 GPU 上启动 GRPO（当前主机上为四张 GPU）：
 
 ```bash
 cd /root/ShopAgent-Training
 bash rl/run_grpo.sh
 ```
 
-Before a real run, validate the entire generate/tool/reward/update path with
-one prompt, two rollouts, and one optimizer step:
+正式运行前，使用一个提示词、两次 rollout 和一个优化器步，对完整的生成/工具/奖励/更新流程进行验证：
 
 ```bash
 bash rl/run_smoke.sh
 ```
 
-The full launcher default is 4 prompts x 4 group samples = 16 concurrent
-environment sessions. The launcher rejects values above 20. On the current
-4-GPU host this gives each data-parallel worker four trajectories per update.
-Common overrides:
+完整启动器的默认配置为 4 个提示词 × 每组 4 个样本，即 16 个并发环境会话。启动器会拒绝大于 20 的值。在当前四 GPU 主机上，每个数据并行工作进程每次更新会处理四条轨迹。常用的覆盖配置如下：
 
 ```bash
 TOTAL_EPOCHS=1 SAVE_FREQ=10 TEST_FREQ=10 \
 GPU_MEMORY_UTILIZATION=0.45 bash rl/run_grpo.sh
 ```
 
-To restrict a run to a subset of GPUs, for example:
+如需将运行限制在部分 GPU 上，例如：
 
 ```bash
 CUDA_VISIBLE_DEVICES=0,1 N_GPUS_PER_NODE=2 bash rl/run_smoke.sh
 ```
 
-Render and validate the complete Hydra configuration without training:
+仅渲染并验证完整的 Hydra 配置，而不进行训练：
 
 ```bash
 CONFIG_ONLY=1 bash rl/run_grpo.sh > /tmp/shopsim-grpo-config.txt
 ```
 
-The launcher uses the already-installed `/root/miniconda3/envs/rl` environment,
-auto-detects its visible GPU count, and trains a rank-32 LoRA with FSDP2 CPU
-offload. It uses vLLM async multi-turn rollout, the non-thinking Qwen chat
-template argument, a 42-assistant-turn limit, a 32,768-token model context, a
-24,576-token response cap, and an explicit KL loss. `model.lora.merge=False` uses
-verl's vLLM-native adapter synchronization: vLLM loads the merged SFT model as
-the immutable base and receives only the newly trained GRPO LoRA weights. This
-also avoids full-weight refits and preserves Qwen3's tied embedding/output
-weight alias.
-The default uses the padded SDPA path, so `flash-attn` is not required.
-It never starts or stops a separate model server: verl owns rollout inference.
+启动器使用已安装的 `/root/miniconda3/envs/rl` 环境，自动检测可见 GPU 数量，并通过 FSDP2 CPU 卸载训练秩为 32 的 LoRA。它使用 vLLM 异步多轮 rollout、Qwen 非思考模式的聊天模板参数、42 个助手轮次的上限、32,768 token 的模型上下文、24,576 token 的响应上限，以及显式 KL 损失。`model.lora.merge=False` 使用 verl 原生的 vLLM 适配器同步机制：vLLM 将已合并的 SFT 模型作为不可变的基座加载，并且只接收新训练的 GRPO LoRA 权重。这也避免了全量权重重新拟合，并保留 Qwen3 的嵌入层/输出层权重共享关系。
 
-The launcher uses verl's synchronous trainer with its official async
-multi-turn rollout path. It does not require the V1 TransferQueue trainer.
-The ShopSimulator bridge delegates action validation and execution to the same
-root `ShopToolAdapter` used by `single_eval`: invalid clicks and same-state
-repeats are returned as recoverable observations, with the same limit of three
-consecutive validation retries. Only orchestration is different: verl owns
-generation and turn scheduling, while the bridge owns rollout-scoped
-ShopSimulator allocation, cleanup, termination diagnostics, and reward traces.
+默认使用带填充的 SDPA 路径，因此不需要 `flash-attn`。
+它不会启动或停止单独的模型服务器：rollout 推理由 verl 负责。
 
-Training also uses verl's native SwanLab logger. Set `SWANLAB_API_KEY` for
-cloud sync, or use `SWANLAB_MODE=local` to keep a local run under
-`/root/autodl-tmp/ShopAgent-Training/rl/outputs/.../swanlog`. Each step records reward means/std/min/max for score,
-strict success, type/attribute/option/price compliance, quality, regret,
-repeat/invalid/back/action counts, outcome and termination rates, plus the
-within-group reward variance. Full per-trajectory values remain in the
-`rollouts/*.jsonl` files.
+启动器使用 verl 的同步训练器及其官方异步多轮 rollout 流程，不需要 V1 TransferQueue 训练器。ShopSimulator 桥接层会将动作验证和执行委托给与 `single_eval` 相同的根级 `ShopToolAdapter`：无效点击和相同状态下的重复动作会作为可恢复的观察结果返回，并采用相同的连续三次验证重试限制。只有编排方式不同：verl 负责生成和轮次调度，而桥接层负责 rollout 范围内的 ShopSimulator 分配、清理、终止诊断和奖励轨迹。
 
-The project pins the official verl Git revision and its tested core stack in
-`requirements.txt`: vLLM 0.24, PyTorch 2.11, Transformers 5.9, and SwanLab
-0.10. Do not mix
-this revision with vLLM 0.29: that release renamed the LoRA mapper API and the
-first in-memory adapter synchronization fails before rollout.
+训练还使用 verl 原生的 SwanLab 日志记录器。设置 `SWANLAB_API_KEY` 可同步到云端，或使用 `SWANLAB_MODE=local` 将本地运行记录保存在 `/root/autodl-tmp/ShopAgent-Training/rl/outputs/.../swanlog` 下。每一步都会记录以下指标的奖励均值/标准差/最小值/最大值：得分、严格成功率、类型/属性/选项/价格合规性、质量、遗憾值、重复/无效/返回/动作计数、结果率和终止率，以及组内奖励方差。每条轨迹的完整数值仍保存在 `rollouts/*.jsonl` 文件中。
 
-## Tests
+项目在 `requirements.txt` 中固定了官方 verl Git 修订版本及其经过测试的核心技术栈：vLLM 0.24、PyTorch 2.11、Transformers 5.9 和 SwanLab 0.10。请勿将此修订版本与 vLLM 0.29 混用：该版本重命名了 LoRA mapper API，导致首次内存内适配器同步在 rollout 开始前失败。
+
+## 测试
 
 ```bash
 cd /root/ShopAgent-Training
